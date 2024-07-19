@@ -6,12 +6,15 @@ execute:
   echo: false
 ---
 
-```{r}
+```{r, warning=FALSE}
 #| label: setup
 #| message: false
 
 library(tidyverse)
 library(gt)
+library(tidybayes)
+library(brms)
+resumes_data<-read.csv(file="./data/resume.csv")
 ```
 
 
@@ -123,8 +126,35 @@ tibble(ID = c("1", "2", "...", "10", "11", "...", "N"),
   tab_spanner(label = "Covariate", columns = c(treatment))
 ```
 
+```{r}
+#| cache: true
 
 
+formula <- call ~ race
+
+# Fit the logistic regression model using brm
+fit <- resumes_data|>brm(formula = formula, family = bernoulli(), refresh= 0, silent=2, seed=9)
+
+
+```
+
+
+```{r}
+#| cache: true
+fit|>
+  add_epred_draws(newdata=resumes_data)|>
+    #select(.epred)|>
+      ggplot(aes(x=.epred,fill=race))+
+      geom_histogram(alpha=1,position="identity",bins=112)+
+      scale_x_continuous(labels=scales::percent_format())+
+      labs(title = "Posterior for Callback Rates",
+           subtitle = "Resumes with white-coded names are much more likely to receive callbacks",
+           x = "Probability of Callback",
+           y = NULL,
+           fill = "(Likely) Race of Name on Resume")+
+      theme(axis.ticks.y = element_blank(),
+            axis.text.y = element_blank())
+```
 
 
 
